@@ -1,0 +1,61 @@
+<!--
+     This launch file provides an example of how to work with GPS data using robot_localization. It runs three nodes:
+       (1) An EKF instance that fuses odometry and IMU data and outputs an odom-frame state estimate
+       (2) A second EKF instance that fuses the same data, but also fuses the transformed GPS data from (3)
+       (3) An instance of navsat_transform_node, which takes in GPS data and produces pose data that has been
+           transformed into your robot's world frame (here, map). The node produces a map-frame state estimate.
+
+       The first EKF instance produces the odom->base_link transform. The second EKF produces the map->odom transform,
+       but requires the odom->base_link transform from the first instance in order to do so. See the
+       params/dual_ekf_navsat_example.yaml file for parameter specification.
+-->
+
+<launch>
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- <include file="$(find controller)/launch/launchSensors.launch" /> -->
+
+  <!-- <node pkg="rosbag" type="play" name="rosbagplay" args="/home/ktkim/Desktop/20210715_1000minus1000.bag -clock -d 5" required="true" output="screen"/> -->
+  <!-- <node pkg="rosbag" type="play" name="rosbagplay" args="/home/ktkim/Desktop/20210715_minus10001000.bag -clock -d 5" required="true" output="screen"/> -->
+  <!-- <node pkg="rosbag" type="play" name="rosbagplay" args="/home/ktkim/Desktop/20210715_towardsShore1000.bag -clock -d 5" required="true" output="screen"/> -->
+  <!-- <node pkg="rosbag" type="play" name="rosbagplay" args="/home/ktkim/Desktop/20210715_5001000.bag -clock -d 5" required="true" output="screen"/> -->
+  <node pkg="rosbag" type="play" name="rosbagplay" args="/home/ktkim/Desktop/20210715_1000500.bag --clock -d 5" required="true" output="screen"/>
+
+  <node pkg="localization" type="publishSensors.py" name="fix_sensor_messages" />
+
+  # args="x y z yaw pitch roll"
+  <node pkg="tf2_ros" type="static_transform_publisher" name="bl_imu0" args=".08 -.51 .192 0 0 3.14159 base_link ad_imu" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="bl_imu1" args="0 0 0 0 0 0 base_link gps_imu" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="bl_gps_port" args=".09 1.155 .122 0 0 0 base_link port_gps" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="bl_gps_starboard" args=".09 -1.155 .122 0 0 0 base_link starboard_gps" />
+
+  <rosparam command="load" file="$(find localization)/params/wamv_localization.yaml" />
+
+  <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_odom" />
+    <!-- <remap from="imu/data" to="sensors/imu/data"/> -->
+  <!-- </node> -->
+
+  <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" >
+    <remap from="odometry/filtered" to="odometry/filtered_map"/>
+    <!-- <remap from="imu/data" to="sensors/imu/data"/> -->
+  </node>
+
+  <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_port" >
+    <remap from="imu/data" to="sensors/gpsImu"/>
+    <remap from="odometry/filtered" to="odometry/filtered_map"/>
+    <remap from="gps/fix" to="sensors/portGps"/>
+    <remap from="odometry/gps" to="odometry/gps_port"/>
+    <remap from="gps/filtered" to="gps/filtered_map"/>
+  </node>
+
+  <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_starboard" >
+    <remap from="imu/data" to="sensors/gpsImu"/>
+    <remap from="odometry/filtered" to="odometry/filtered_map"/>
+    <remap from="gps/fix" to="sensors/staboardGps"/>
+    <remap from="odometry/gps" to="odometry/gps_starboard"/>
+  </node>
+
+
+
+</launch>

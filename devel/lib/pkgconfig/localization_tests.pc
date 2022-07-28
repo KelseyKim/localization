@@ -1,0 +1,8 @@
+prefix=/home/ktkim/Workspaces/localization/devel
+
+Name: localization_tests
+Description: Description of localization_tests
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
